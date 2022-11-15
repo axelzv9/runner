@@ -20,7 +20,7 @@ func main() {
 		return nil
 	}
 
-	errs := runner.New(context.Background(), runner.WithSignalHandler()).
+	errs := runner.New(context.Background(), runner.WithSignalHandler(syscall.SIGINT, syscall.SIGTERM)).
 		RunGracefully(runner.HTTPServer(server)).
 		Run(someJob).
 		Wait()
