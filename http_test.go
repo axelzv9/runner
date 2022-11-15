@@ -16,7 +16,7 @@ func TestHTTPServer(t *testing.T) {
 	timeout := time.Second
 	now := time.Now()
 
-	New().
+	New(context.Background()).
 		RunGracefully(HTTPServer(httpServer)).
 		Run(func(ctx context.Context) error {
 			<-time.After(timeout)

@@ -3,7 +3,6 @@ package runner
 import (
 	"os"
 	"os/signal"
-	"syscall"
 	"time"
 )
 
@@ -18,10 +17,9 @@ func WithShutdownTimeout(shutdownTimeout time.Duration) Option {
 	}
 }
 
-// WithSignalHandler handles SIGINT and SIGTERM signals by default
+// WithSignalHandler handles passed signals
 func WithSignalHandler(signals ...os.Signal) Option {
 	return func(runner *Runner) {
-		signals = append(signals, syscall.SIGINT, syscall.SIGTERM)
 		runner.ctx, _ = signal.NotifyContext(runner.ctx, signals...)
 	}
 }

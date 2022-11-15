@@ -21,18 +21,19 @@ type Runner struct {
 	shutdown []Func
 }
 
-func New(opts ...Option) *Runner {
-	ctx, cancel := context.WithCancel(context.Background())
+func New(ctx context.Context, opts ...Option) *Runner {
+	ctx, cancel := context.WithCancel(ctx)
 	runner := &Runner{
 		ctx:             ctx,
 		cancel:          cancel,
 		shutdownTimeout: defaultShutdownTimeout,
-		group:           NewErrorGroup(ctx),
 	}
 
 	for _, opt := range opts {
 		opt(runner)
 	}
+
+	runner.group = NewErrorGroup(runner.ctx)
 
 	return runner
 }
