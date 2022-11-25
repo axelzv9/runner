@@ -1,8 +1,6 @@
 package runner
 
 import (
-	"os"
-	"os/signal"
 	"time"
 )
 
@@ -14,13 +12,6 @@ func WithShutdownTimeout(shutdownTimeout time.Duration) Option {
 		if shutdownTimeout > 0 {
 			runner.shutdownTimeout = shutdownTimeout
 		}
-	}
-}
-
-// WithSignalHandler handles passed signals
-func WithSignalHandler(signals ...os.Signal) Option {
-	return func(runner *Runner) {
-		runner.ctx, _ = signal.NotifyContext(runner.ctx, signals...)
 	}
 }
 

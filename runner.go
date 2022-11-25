@@ -12,8 +12,6 @@ type Func func(context.Context) error
 const defaultShutdownTimeout = 30 * time.Second
 
 type Runner struct {
-	ctx             context.Context
-	cancel          context.CancelFunc
 	shutdownTimeout time.Duration
 	group           ErrorGroup
 
@@ -22,18 +20,14 @@ type Runner struct {
 }
 
 func New(ctx context.Context, opts ...Option) *Runner {
-	ctx, cancel := context.WithCancel(ctx)
 	runner := &Runner{
-		ctx:             ctx,
-		cancel:          cancel,
 		shutdownTimeout: defaultShutdownTimeout,
+		group:           NewErrorGroup(ctx),
 	}
 
 	for _, opt := range opts {
 		opt(runner)
 	}
-
-	runner.group = NewErrorGroup(runner.ctx)
 
 	return runner
 }
