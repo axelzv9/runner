@@ -37,13 +37,17 @@ func (r *Runner) Run(fn Func) *Runner {
 }
 
 func (r *Runner) RunGracefully(fn, shutdown Func) *Runner {
-	if shutdown != nil {
+	r.AddShutdown(shutdown)
+	r.group.Go(fn)
+	return r
+}
+
+func (r *Runner) AddShutdown(shutdown ...Func) *Runner {
+	if shutdown != nil && len(shutdown) > 0 {
 		r.mu.Lock()
-		r.shutdown = append(r.shutdown, shutdown)
+		r.shutdown = append(r.shutdown, shutdown...)
 		r.mu.Unlock()
 	}
-
-	r.group.Go(fn)
 	return r
 }
 
