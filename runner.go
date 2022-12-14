@@ -43,9 +43,12 @@ func (r *Runner) RunGracefully(fn, shutdown Func) *Runner {
 }
 
 func (r *Runner) AddShutdown(shutdown ...Func) *Runner {
-	if shutdown != nil && len(shutdown) > 0 {
+	for _, sd := range shutdown {
+		if sd == nil {
+			continue
+		}
 		r.mu.Lock()
-		r.shutdown = append(r.shutdown, shutdown...)
+		r.shutdown = append(r.shutdown, sd)
 		r.mu.Unlock()
 	}
 	return r

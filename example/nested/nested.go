@@ -46,12 +46,12 @@ func main() {
 	}
 }
 
-func someShutdownFunc(ctx context.Context) error {
+func someShutdownFunc(_ context.Context) error {
 	log.Println("I'm shutting down...")
 	return nil
 }
 
-func someJob(ctx context.Context) error {
+func someJob(_ context.Context) error {
 	time.Sleep(5 * time.Second)
 	// job finished before http.Server, it does not affect http.Server, if it has no errors
 	log.Println("someJob has been completed")

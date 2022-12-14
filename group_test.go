@@ -87,8 +87,8 @@ func TestGroup(t *testing.T) {
 			testGroup.Go(tc.tasks...)
 
 			err := testGroup.WaitFirst()
-			if len(tc.errs) == 0 && err != nil {
-				t.Fatal("err must be nil")
+			if len(tc.errs) == 0 {
+				assert.Nil(t, err)
 			}
 			if len(tc.errs) > 0 {
 				assert.Equal(t, err, tc.errs[0])

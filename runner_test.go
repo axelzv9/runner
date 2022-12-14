@@ -57,9 +57,11 @@ func TestRunner(t *testing.T) {
 			name: "background and shutdown failed",
 			background: [2]Func{
 				func(ctx context.Context) error {
+					<-time.After(time.Millisecond)
 					return errTask
 				},
 				func(ctx context.Context) error {
+					<-time.After(2 * time.Millisecond)
 					return errShutdown
 				},
 			},

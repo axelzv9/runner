@@ -24,7 +24,7 @@ func TestHTTPServer(t *testing.T) {
 		}).
 		Wait()
 
-	if time.Since(now.Add(10*time.Millisecond)) > timeout {
+	if time.Since(now.Add(50*time.Millisecond)) > timeout {
 		t.Fatal("too match time")
 	}
 }
