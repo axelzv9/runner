@@ -8,6 +8,7 @@ import (
 )
 
 type Func func(context.Context) error
+type InitFunc func(ctx context.Context, runner *Runner) error
 
 const defaultShutdownTimeout = 30 * time.Second
 
@@ -30,6 +31,12 @@ func New(ctx context.Context, opts ...Option) *Runner {
 	}
 
 	return runner
+}
+
+func (r *Runner) Init(fn InitFunc) *Runner {
+	return r.Run(func(ctx context.Context) error {
+		return fn(ctx, r)
+	})
 }
 
 func (r *Runner) Run(fn Func) *Runner {
@@ -58,40 +65,23 @@ func (r *Runner) Wait() []error {
 	// waiting for the first workers error
 	_ = r.group.WaitFirst()
 
-	errs := new(Errors)
+	errs := new(errorSlice)
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), r.shutdownTimeout)
 	defer shutdownCancel()
 
 	_ = NewErrorGroup(shutdownCtx).Go(func(_ context.Context) error {
 		// waiting for all workers
-		errs.Append(r.group.WaitAll()...)
+		errs.append(r.group.WaitAll()...)
 		return nil
 	}).Go(func(ctx context.Context) error {
 		// waiting for shutdown process
-		errs.Append(NewErrorGroup(ctx).Go(r.shutdown...).WaitAll()...)
+		errs.append(NewErrorGroup(ctx).Go(r.shutdown...).WaitAll()...)
 		return nil
 	}).WaitFirst()
 
 	if err := shutdownCtx.Err(); err == nil || errors.Is(err, context.Canceled) {
-		return errs.Errors()
+		return errs.items()
 	}
-	return append(errs.Errors(), shutdownCtx.Err())
-}
-
-type Errors struct {
-	mu   sync.Mutex
-	errs []error
-}
-
-func (e *Errors) Append(errs ...error) {
-	e.mu.Lock()
-	e.errs = append(e.errs, errs...)
-	e.mu.Unlock()
-}
-
-func (e *Errors) Errors() []error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	return e.errs
+	return append(errs.items(), shutdownCtx.Err())
 }

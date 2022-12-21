@@ -143,7 +143,11 @@ func TestRunner(t *testing.T) {
 	for _, testcase := range testcases {
 		tc := testcase
 		t.Run(tc.name, func(t *testing.T) {
-			errs := New(context.Background(), WithShutdownTimeout(tc.shutdownTimeout), WithShutdown(tc.shutdown...)).
+			errs := New(context.Background(), WithShutdownTimeout(tc.shutdownTimeout)).
+				Init(func(ctx context.Context, group *Runner) error {
+					group.AddShutdown(tc.shutdown...)
+					return nil
+				}).
 				RunGracefully(tc.background[0], tc.background[1]).
 				Wait()
 

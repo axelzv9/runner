@@ -14,15 +14,3 @@ func WithShutdownTimeout(shutdownTimeout time.Duration) Option {
 		}
 	}
 }
-
-// WithShutdown adds graceful shutdown functions
-func WithShutdown(fns ...Func) Option {
-	return func(runner *Runner) {
-		for _, fn := range fns {
-			if fn == nil {
-				continue
-			}
-			runner.shutdown = append(runner.shutdown, fn)
-		}
-	}
-}

@@ -24,8 +24,7 @@ type group struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
-	mu   sync.Mutex
-	errs []error
+	errs errorSlice
 }
 
 func (g *group) Go(fn ...Func) ErrorGroup {
@@ -44,10 +43,8 @@ func (g *group) WaitFirst() error {
 	g.waitCtx()
 
 	var err error
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	if len(g.errs) > 0 {
-		err = g.errs[0]
+	if items := g.errs.items(); len(items) > 0 {
+		err = items[0]
 	}
 	return err
 }
@@ -57,9 +54,7 @@ func (g *group) WaitAll() []error {
 
 	g.wg.Wait()
 
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	return append([]error(nil), g.errs...)
+	return append([]error(nil), g.errs.items()...)
 }
 
 func (g *group) waitCtx() {
@@ -72,11 +67,25 @@ func (g *group) waitCtx() {
 
 func (g *group) done(err error) {
 	if err != nil {
-		g.mu.Lock()
-		g.errs = append(g.errs, err)
-		g.mu.Unlock()
-
+		g.errs.append(err)
 		g.cancel()
 	}
 	g.wg.Done()
+}
+
+type errorSlice struct {
+	mu    sync.Mutex
+	slice []error
+}
+
+func (e *errorSlice) append(errs ...error) {
+	e.mu.Lock()
+	e.slice = append(e.slice, errs...)
+	e.mu.Unlock()
+}
+
+func (e *errorSlice) items() []error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.slice
 }

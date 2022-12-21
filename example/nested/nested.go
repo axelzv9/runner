@@ -15,32 +15,36 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer cancel()
 
-	group := runner.New(ctx, runner.WithShutdownTimeout(10*time.Second), runner.WithShutdown(someShutdownFunc))
-	group.Run(func(ctx context.Context) error {
-		// load config
-		serverAddr := ":8080"
+	errs := runner.New(ctx, runner.WithShutdownTimeout(10*time.Second)).
+		// init and run your jobs
+		Init(func(ctx context.Context, group *runner.Runner) error {
+			// add graceful shutdown for something
+			group.AddShutdown(someShutdownFunc)
 
-		// and init your dependencies here
-		server := &http.Server{
-			Addr: serverAddr,
-		}
+			// load config
+			serverAddr := ":8080"
 
-		dbConn := initDB()
-		closeDBConn := func(ctx context.Context) error {
-			return dbConn.Close()
-		}
+			// and init your dependencies here
+			server := &http.Server{
+				Addr: serverAddr,
+			}
 
-		// add custom shutdown functions and run your jobs
-		group.
-			AddShutdown(closeDBConn).
-			RunGracefully(runner.HTTPServer(server)).
-			Run(someJob)
+			dbConn := initDB()
+			closeDBConn := func(ctx context.Context) error {
+				return dbConn.Close()
+			}
+			// add graceful shutdown for database connection
+			group.AddShutdown(closeDBConn)
 
-		return nil
-	})
+			// run your jobs
+			group.
+				RunGracefully(runner.HTTPServer(server)).
+				Run(someJob)
 
-	// wait for results
-	errs := group.Wait()
+			return nil
+		}).
+		// waiting for results
+		Wait()
 	for _, err := range errs {
 		log.Println("error occurred:", err)
 	}
