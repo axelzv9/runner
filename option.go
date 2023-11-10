@@ -14,3 +14,12 @@ func WithShutdownTimeout(shutdownTimeout time.Duration) Option {
 		}
 	}
 }
+
+// WithCleanupTimeout sets up cleanup timeout
+func WithCleanupTimeout(cleanupTimeout time.Duration) Option {
+	return func(runner *Runner) {
+		if cleanupTimeout > 0 {
+			runner.cleanupTimeout = cleanupTimeout
+		}
+	}
+}

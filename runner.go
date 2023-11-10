@@ -10,19 +10,25 @@ import (
 type Func func(context.Context) error
 type InitFunc func(ctx context.Context, runner *Runner) error
 
-const defaultShutdownTimeout = 30 * time.Second
+const (
+	defaultShutdownTimeout = 30 * time.Second
+	defaultCleanTimeout    = 30 * time.Second
+)
 
 type Runner struct {
 	shutdownTimeout time.Duration
+	cleanupTimeout  time.Duration
 	group           ErrorGroup
 
 	mu       sync.Mutex
 	shutdown []Func
+	cleanup  []Func
 }
 
 func New(ctx context.Context, opts ...Option) *Runner {
 	runner := &Runner{
 		shutdownTimeout: defaultShutdownTimeout,
+		cleanupTimeout:  defaultCleanTimeout,
 		group:           NewErrorGroup(ctx),
 	}
 
@@ -61,6 +67,18 @@ func (r *Runner) AddShutdown(shutdown ...Func) *Runner {
 	return r
 }
 
+func (r *Runner) AddCleanup(cleanup ...Func) *Runner {
+	for _, fn := range cleanup {
+		if fn == nil {
+			continue
+		}
+		r.mu.Lock()
+		r.cleanup = append(r.cleanup, fn)
+		r.mu.Unlock()
+	}
+	return r
+}
+
 func (r *Runner) Wait() []error {
 	// waiting for the first workers error
 	_ = r.group.WaitFirst()
@@ -80,8 +98,14 @@ func (r *Runner) Wait() []error {
 		return nil
 	}).WaitFirst()
 
-	if err := shutdownCtx.Err(); err == nil || errors.Is(err, context.Canceled) {
-		return errs.items()
+	if err := shutdownCtx.Err(); err != nil && !errors.Is(err, context.Canceled) {
+		errs.append(err)
 	}
-	return append(errs.items(), shutdownCtx.Err())
+
+	cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), r.cleanupTimeout)
+	defer cleanupCancel()
+
+	errs.append(NewErrorGroup(cleanupCtx).Go(r.cleanup...).WaitAll()...)
+
+	return errs.items()
 }
