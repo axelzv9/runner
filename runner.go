@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type Func func(context.Context) error
+type Func func(ctx context.Context) error
 type InitFunc func(ctx context.Context, runner *Runner) error
 
 const (
