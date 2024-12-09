@@ -11,12 +11,21 @@ type ErrorGroup interface {
 	WaitAll() []error
 }
 
-func NewErrorGroup(ctx context.Context) ErrorGroup {
+func NewErrorGroup(ctx context.Context, opts ...GroupOptions) ErrorGroup {
 	c, cancel := context.WithCancel(ctx)
-	return &group{
+	g := &group{
 		ctx:    c,
 		cancel: cancel,
 	}
+
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		opt(g)
+	}
+
+	return g
 }
 
 type group struct {
@@ -24,18 +33,34 @@ type group struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
+	pool *Pool
+
 	errs errorSlice
 }
 
 func (g *group) Go(fn ...Func) ErrorGroup {
-	for _, f := range fn {
-		p := f
-		g.wg.Add(1)
-		go func() {
-			err := p(g.ctx)
-			g.done(err)
-		}()
+	g.wg.Add(len(fn))
+
+	if g.pool == nil {
+		for _, f := range fn {
+			go func(f Func) {
+				g.done(f(g.ctx))
+			}(f)
+		}
+		return g
 	}
+
+	for _, f := range fn {
+		err := g.pool.Go(func(f Func) func() {
+			return func() {
+				g.done(f(g.ctx))
+			}
+		}(f))
+		if err != nil {
+			g.done(err)
+		}
+	}
+
 	return g
 }
 
