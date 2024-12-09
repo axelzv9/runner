@@ -6,6 +6,7 @@ import (
 )
 
 type ErrorGroup interface {
+	Reset(ctx context.Context) ErrorGroup
 	Go(fn ...Func) ErrorGroup
 	WaitFirst() error
 	WaitAll() []error
@@ -25,6 +26,12 @@ type group struct {
 	wg     sync.WaitGroup
 
 	errs errorSlice
+}
+
+func (g *group) Reset(ctx context.Context) ErrorGroup {
+	g.ctx, g.cancel = context.WithCancel(ctx)
+	g.errs.slice = g.errs.slice[0:]
+	return g
 }
 
 func (g *group) Go(fn ...Func) ErrorGroup {
